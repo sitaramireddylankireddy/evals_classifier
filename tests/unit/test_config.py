@@ -212,6 +212,36 @@ def test_overlap_as_large_as_the_window_is_rejected(tmp_path):
         load_settings(path)
 
 
+# --- Run, store, and judge settings (feature 006) ---
+
+
+def test_run_store_and_judge_defaults():
+    settings = Settings()
+
+    assert settings.run.sample_rate == 0.02
+    assert settings.run.sample_seed == "evalsvc"
+    assert settings.store.kind == "jsonl"
+    assert settings.store.path == "store"
+    assert settings.store.write_retries == 3
+    assert settings.judge.kind == "stub"
+    assert settings.judge.timeout_seconds == 60
+
+
+@pytest.mark.parametrize("rate", ["1.5", "-0.1"])
+def test_sample_rate_outside_zero_to_one_is_rejected(tmp_path, rate):
+    path = write_config(tmp_path, f"[run]\nsample_rate = {rate}\n")
+
+    with pytest.raises(ConfigError, match="run.sample_rate"):
+        load_settings(path)
+
+
+def test_judge_timeout_must_be_positive(tmp_path):
+    path = write_config(tmp_path, "[judge]\ntimeout_seconds = 0\n")
+
+    with pytest.raises(ConfigError, match="judge.timeout_seconds"):
+        load_settings(path)
+
+
 def test_unknown_device_is_rejected(tmp_path):
     path = write_config(tmp_path, '[model]\ndevice = "quantum"\n')
 

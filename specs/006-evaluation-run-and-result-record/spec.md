@@ -83,6 +83,8 @@ As an operator, one bad item does not cost me the results of the others.
 - **FR-012**: Records contain customer text in spans and reasons. They MUST be written only to the service's own store. Application logs MUST carry only identifiers, counts, scores, and reason codes.
 - **FR-013**: The sample rate MUST come from config.
 - **FR-014**: After a list is processed, the system MUST report how many items were evaluated, how many passed, how many failed, and how many were not evaluable.
+- **FR-017**: Deterministic checks (feature 004, postponed) and span explanations (feature 005, not yet built) are optional stages. When a stage is not available, the run MUST skip it, leave its part of the record empty, and name it in the record's `stages_skipped` list, so "not run" is never mistaken for "nothing found".
+- **FR-018**: Adding a skipped stage later MUST NOT require any change to the rest of the run.
 - **FR-015**: At the start of a run the system MUST select the model from the hardware, as defined in feature 003: the large model on a GPU and the base model on CPU. One model is used for the whole run, and the run report names the model and device.
 - **FR-016**: The threshold in force for a run MUST be the selected model's own threshold when it has one.
 

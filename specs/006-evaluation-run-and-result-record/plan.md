@@ -135,8 +135,19 @@ Any exception in steps 2 to 5 is caught. The item gets a not-evaluable record wi
 1. **Phase 1**: evaluate every item and write its record.
 2. **Phase 2**: for each record whose verdict is `fail` or that is sampled, call the judge with a time limit. Write a new version of the record with the escalation outcome. A judge error or timeout is recorded as `status="failed"` with an error code.
 
+### Stages not yet built
+
+Feature 004 is postponed and feature 005 is not built, so both are optional slots in `Components`:
+
+- `checks: DeterministicChecks | None` and `reasons: ReasonGenerator | None`, both protocols in `evalsvc/interfaces.py`. Both are `None` for now.
+- The data types they return, `CheckResult` and `SpanExplanation`, are defined now in `evalsvc/types.py` as their plans describe, so the record shape is final.
+- With no checks, `deterministic_checks` is an empty list. With no reason generator, each span's `reason_type`, `reason`, and `nearest_chunk_id` are empty.
+- `ResultRecord.stages_skipped` lists `"deterministic_checks"` and `"explanations"` when they did not run.
+- Tests pass in stand-ins for both slots to prove the record is filled when they exist.
+
 ### Rules
 
+- **Judge request**: item ID, question, answer, the answer sentences that hold a counted span, and the full evidence.
 - **Model**: `build_components` calls `gpu_available` and `select_model` from feature 003 once, builds the detector for the selected model, and uses `detection_settings_for` so the selected model's threshold is in force. One model serves the whole run. `RunSummary` gains `model` and `device`, and the command prints them. A store filled from GPU and CPU machines holds results from two models; each record's `model` field tells them apart.
 - **Sampling**: `is_sampled` hashes the seed and the item ID to a number between 0 and 1 and compares it with the rate. The result is repeatable, which makes it testable, and over many items the share matches the rate.
 - **Judge request**: item ID, question, the text of each non-excluded span with its surrounding sentence, and the full evidence.

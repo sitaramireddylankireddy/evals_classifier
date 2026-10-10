@@ -2,7 +2,7 @@
 
 **Feature**: `004-deterministic-checks`
 **Created**: 2026-10-10
-**Status**: Draft
+**Status**: Postponed on 2026-10-10. Not started; the spec, plan, and tasks are kept as they are.
 
 ## Summary
 

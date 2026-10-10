@@ -3,6 +3,22 @@
 # Patterns are regular expressions, written in single quotes so that
 # backslashes are kept as they are.
 
+[run]
+# Share of evaluable items sent to the judge whatever their verdict. Failed items always go.
+sample_rate = 0.02
+sample_seed = "evalsvc"
+
+[store]
+kind = "jsonl"
+# Folder for result records. Records hold customer text, so protect this folder
+# like the source data.
+path = "store"
+write_retries = 3
+
+[judge]
+kind = "stub"            # the real judge is connected later
+timeout_seconds = 60
+
 [input]
 parser = "json_list"
 key_id = "id"

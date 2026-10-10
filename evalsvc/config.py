@@ -134,7 +134,27 @@ class DetectionSettings(FrozenModel):
         return self
 
 
+class RunSettings(FrozenModel):
+    # Share of evaluable items sent to the judge regardless of verdict.
+    sample_rate: float = Field(default=0.02, ge=0.0, le=1.0)
+    sample_seed: str = "evalsvc"
+
+
+class StoreSettings(FrozenModel):
+    kind: str = "jsonl"
+    path: str = "store"  # folder for result records; holds customer text
+    write_retries: int = Field(default=3, ge=0)
+
+
+class JudgeSettings(FrozenModel):
+    kind: str = "stub"
+    timeout_seconds: float = Field(default=60.0, gt=0.0)
+
+
 class Settings(FrozenModel):
+    run: RunSettings = RunSettings()
+    store: StoreSettings = StoreSettings()
+    judge: JudgeSettings = JudgeSettings()
     input: InputSettings = InputSettings()
     chunking: ChunkingSettings = ChunkingSettings()
     sentences: SentenceSettings = SentenceSettings()

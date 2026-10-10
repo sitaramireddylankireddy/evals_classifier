@@ -101,6 +101,41 @@ class Span(FrozenModel):
     excluded: bool = False  # touches no factual sentence, so it is left out of scoring
 
 
+class CheckResult(FrozenModel):
+    """Outcome of one deterministic check on one value in the answer."""
+
+    check: str
+    passed: bool
+    start: int | None = None  # character range in the answer; None for a missing required field
+    end: int | None = None
+    value: str | None = None
+    normalised: str | None = None
+    field: str | None = None
+    note: str | None = None
+
+
+class SpanExplanation(FrozenModel):
+    """Why a span was flagged, and the closest evidence."""
+
+    reason_type: str
+    reason: str
+    nearest_chunk_id: str | None = None
+    nearest_sentence: str | None = None
+
+
+class JudgeRequest(FrozenModel):
+    item_id: str
+    question: str
+    answer: str
+    claims: list[str]  # answer sentences that hold a flagged span
+    evidence: list[str]
+
+
+class JudgeResponse(FrozenModel):
+    verdict: str
+    rationale: str
+
+
 class ModelInfo(FrozenModel):
     name: str
     revision: str
