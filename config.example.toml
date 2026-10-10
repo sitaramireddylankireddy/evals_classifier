@@ -1,0 +1,9 @@
+# Copy this file to config.toml and adjust it. Every key is optional;
+# the values shown here are the defaults.
+
+[input]
+parser = "json_list"
+key_id = "id"
+key_question = "question"
+key_evidence = "evidence"
+key_answer = "answer"

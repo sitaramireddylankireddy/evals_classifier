@@ -1,0 +1,49 @@
+[
+  {
+    "id": "bad-001",
+    "question": "ZZSENTINEL What is the monthly account fee?",
+    "evidence": ["ZZSENTINEL The monthly account fee is £2."],
+    "answer": "ZZSENTINEL The monthly fee is £2."
+  },
+  "ZZSENTINEL this entry is text, not an object",
+  {
+    "question": "ZZSENTINEL This object has no identifier.",
+    "evidence": ["ZZSENTINEL Some evidence."],
+    "answer": "ZZSENTINEL Some answer."
+  },
+  {
+    "id": "bad-001",
+    "question": "ZZSENTINEL This object repeats an identifier.",
+    "evidence": ["ZZSENTINEL Some evidence."],
+    "answer": "ZZSENTINEL Some answer."
+  },
+  {
+    "id": "bad-004",
+    "question": "ZZSENTINEL This object has no answer key.",
+    "evidence": ["ZZSENTINEL Some evidence."]
+  },
+  {
+    "id": "bad-005",
+    "question": "ZZSENTINEL This object has a number among its evidence passages.",
+    "evidence": ["ZZSENTINEL Some evidence.", 5],
+    "answer": "ZZSENTINEL Some answer."
+  },
+  {
+    "id": "bad-006",
+    "question": "ZZSENTINEL This object has a blank answer.",
+    "evidence": ["ZZSENTINEL Some evidence."],
+    "answer": "   "
+  },
+  {
+    "id": "bad-007",
+    "question": "ZZSENTINEL This object has no evidence.",
+    "evidence": [],
+    "answer": "ZZSENTINEL Some answer."
+  },
+  {
+    "id": "bad-008",
+    "question": "ZZSENTINEL What is the paper statement fee?",
+    "evidence": ["ZZSENTINEL A paper statement costs £1.50 per month."],
+    "answer": "ZZSENTINEL A paper statement costs £1.50 per month."
+  }
+]

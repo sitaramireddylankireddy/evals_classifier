@@ -1,0 +1,26 @@
+[
+  {
+    "id": "item-001",
+    "question": "ZZSENTINEL What is the daily cash withdrawal limit on a standard current account?",
+    "evidence": [
+      "ZZSENTINEL Section 4.2 Cash withdrawals. The daily cash withdrawal limit on a standard current account is £500.",
+      "ZZSENTINEL Section 4.3 Limit reviews. A limit can be reviewed on request after 3 months."
+    ],
+    "answer": "ZZSENTINEL The daily cash withdrawal limit is £500."
+  },
+  {
+    "id": "item-002",
+    "question": "ZZSENTINEL What is the arranged overdraft interest rate?",
+    "evidence": "ZZSENTINEL The arranged overdraft interest rate is 19.5% per year from 1 March 2025.",
+    "answer": "ZZSENTINEL The arranged overdraft rate is 19.5% from 1 March 2025."
+  },
+  {
+    "id": "item-003",
+    "question": "ZZSENTINEL How much does a replacement debit card cost?",
+    "evidence": [
+      "ZZSENTINEL A replacement debit card costs £5. It arrives within 5 working days."
+    ],
+    "answer": "ZZSENTINEL A replacement card costs £5 and arrives within 5 working days.",
+    "category": "cards"
+  }
+]
