@@ -71,3 +71,68 @@ def test_invalid_toml_gives_a_clear_error(tmp_path):
 
     with pytest.raises(ConfigError, match="not valid TOML"):
         load_settings(path)
+
+
+# --- Text preparation settings (feature 002) ---
+
+
+def test_text_preparation_defaults():
+    settings = Settings()
+
+    assert settings.chunking.min_tokens == 300
+    assert settings.chunking.max_tokens == 500
+    assert len(settings.chunking.heading_patterns) == 4
+    assert settings.sentences.spacy_pipeline == "blank_en"
+    assert [rule.name for rule in settings.sentences.non_factual_rules] == [
+        "apology",
+        "empathy",
+        "thanks",
+        "next_step",
+    ]
+    assert settings.checks.currencies == ["GBP"]
+    assert len(settings.checks.reference_patterns) == 1
+
+
+def test_chunk_sizes_can_be_set(tmp_path):
+    path = write_config(tmp_path, "[chunking]\nmin_tokens = 100\nmax_tokens = 200\n")
+
+    settings = load_settings(path)
+
+    assert (settings.chunking.min_tokens, settings.chunking.max_tokens) == (100, 200)
+
+
+def test_min_tokens_above_max_tokens_is_rejected(tmp_path):
+    path = write_config(tmp_path, "[chunking]\nmin_tokens = 600\nmax_tokens = 500\n")
+
+    with pytest.raises(ConfigError, match="min_tokens"):
+        load_settings(path)
+
+
+def test_rule_list_in_the_file_replaces_the_defaults(tmp_path):
+    path = write_config(
+        tmp_path,
+        "[[sentences.non_factual_rules]]\nname = \"greeting\"\npattern = '(?i)^hello\\b'\n",
+    )
+
+    settings = load_settings(path)
+
+    assert [(rule.name, rule.pattern) for rule in settings.sentences.non_factual_rules] == [
+        ("greeting", r"(?i)^hello\b")
+    ]
+
+
+def test_rule_with_an_invalid_pattern_gives_a_clear_error(tmp_path):
+    path = write_config(
+        tmp_path,
+        "[[sentences.non_factual_rules]]\nname = \"broken\"\npattern = '(unclosed'\n",
+    )
+
+    with pytest.raises(ConfigError, match="invalid regular expression"):
+        load_settings(path)
+
+
+def test_invalid_heading_pattern_gives_a_clear_error(tmp_path):
+    path = write_config(tmp_path, "[chunking]\nheading_patterns = ['[a-']\n")
+
+    with pytest.raises(ConfigError, match="chunking.heading_patterns"):
+        load_settings(path)

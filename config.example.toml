@@ -1,5 +1,7 @@
 # Copy this file to config.toml and adjust it. Every key is optional;
 # the values shown here are the defaults.
+# Patterns are regular expressions, written in single quotes so that
+# backslashes are kept as they are.
 
 [input]
 parser = "json_list"
@@ -7,3 +9,43 @@ key_id = "id"
 key_question = "question"
 key_evidence = "evidence"
 key_answer = "answer"
+
+[chunking]
+min_tokens = 300
+max_tokens = 500
+max_heading_chars = 120
+# A line is a heading when it matches one of these and does not end like a sentence.
+heading_patterns = [
+    '^#{1,6}\s+\S',
+    '^\d+(?:\.\d+)*\.?\s+[A-Z]',
+    '^[A-Z][A-Z \-]{3,60}$',
+    '(?i)^(?:section|clause|article|part|chapter|schedule|appendix)\s+\d',
+]
+
+[sentences]
+# "blank_en" needs no downloaded language model. Any installed spaCy pipeline name also works.
+spacy_pipeline = "blank_en"
+
+# Sentences matching one of these rules are left out of scoring, unless they
+# contain an amount, a date, a percentage, or a reference.
+[[sentences.non_factual_rules]]
+name = "apology"
+pattern = '(?i)\b(?:sorry|apologi[sz]e|apologies)\b'
+
+[[sentences.non_factual_rules]]
+name = "empathy"
+pattern = '(?i)\b(?:we|i) (?:understand|appreciate|realise|realize)\b'
+
+[[sentences.non_factual_rules]]
+name = "thanks"
+pattern = '(?i)^\W*thank(?:s| you)\b'
+
+[[sentences.non_factual_rules]]
+name = "next_step"
+pattern = '(?i)\b(?:please (?:contact|let us know|get in touch)|if you have any (?:further |other )?questions|do not hesitate)\b'
+
+[checks]
+currencies = ["GBP"]
+reference_patterns = [
+    '(?i)\b(?:section|clause|paragraph|article)\s+\d+(?:\.\d+)*[a-z]?\b',
+]

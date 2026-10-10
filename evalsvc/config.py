@@ -1,15 +1,28 @@
 """Service settings, read from one TOML file."""
 
+import re
 import tomllib
 from pathlib import Path
+from typing import Annotated
 
-from pydantic import ValidationError
+from pydantic import AfterValidator, Field, ValidationError, model_validator
 
 from evalsvc.types import FrozenModel
 
 
 class ConfigError(Exception):
     """The config file is missing, unreadable, or has invalid content."""
+
+
+def _check_pattern(pattern: str) -> str:
+    try:
+        re.compile(pattern)
+    except re.error as exc:
+        raise ValueError(f"invalid regular expression: {exc}") from None
+    return pattern
+
+
+Pattern = Annotated[str, AfterValidator(_check_pattern)]
 
 
 class InputSettings(FrozenModel):
@@ -20,8 +33,72 @@ class InputSettings(FrozenModel):
     key_answer: str = "answer"
 
 
+DEFAULT_HEADING_PATTERNS = [
+    r"^#{1,6}\s+\S",
+    r"^\d+(?:\.\d+)*\.?\s+[A-Z]",
+    r"^[A-Z][A-Z \-]{3,60}$",
+    r"(?i)^(?:section|clause|article|part|chapter|schedule|appendix)\s+\d",
+]
+
+
+class ChunkingSettings(FrozenModel):
+    min_tokens: int = Field(default=300, ge=1)
+    max_tokens: int = Field(default=500, ge=1)
+    heading_patterns: list[Pattern] = Field(default_factory=lambda: list(DEFAULT_HEADING_PATTERNS))
+    max_heading_chars: int = Field(default=120, ge=1)
+
+    @model_validator(mode="after")
+    def _min_not_above_max(self) -> "ChunkingSettings":
+        if self.min_tokens > self.max_tokens:
+            raise ValueError("min_tokens must not be larger than max_tokens")
+        return self
+
+
+class NonFactualRule(FrozenModel):
+    name: str
+    pattern: Pattern
+
+
+def _default_non_factual_rules() -> list[NonFactualRule]:
+    return [
+        NonFactualRule(name="apology", pattern=r"(?i)\b(?:sorry|apologi[sz]e|apologies)\b"),
+        NonFactualRule(
+            name="empathy",
+            pattern=r"(?i)\b(?:we|i) (?:understand|appreciate|realise|realize)\b",
+        ),
+        NonFactualRule(name="thanks", pattern=r"(?i)^\W*thank(?:s| you)\b"),
+        NonFactualRule(
+            name="next_step",
+            pattern=(
+                r"(?i)\b(?:please (?:contact|let us know|get in touch)"
+                r"|if you have any (?:further |other )?questions|do not hesitate)\b"
+            ),
+        ),
+    ]
+
+
+class SentenceSettings(FrozenModel):
+    spacy_pipeline: str = "blank_en"
+    non_factual_rules: list[NonFactualRule] = Field(default_factory=_default_non_factual_rules)
+
+
+DEFAULT_REFERENCE_PATTERNS = [
+    r"(?i)\b(?:section|clause|paragraph|article)\s+\d+(?:\.\d+)*[a-z]?\b",
+]
+
+
+class ChecksSettings(FrozenModel):
+    currencies: list[str] = Field(default_factory=lambda: ["GBP"])
+    reference_patterns: list[Pattern] = Field(
+        default_factory=lambda: list(DEFAULT_REFERENCE_PATTERNS)
+    )
+
+
 class Settings(FrozenModel):
     input: InputSettings = InputSettings()
+    chunking: ChunkingSettings = ChunkingSettings()
+    sentences: SentenceSettings = SentenceSettings()
+    checks: ChecksSettings = ChecksSettings()
 
 
 def load_settings(path: Path) -> Settings:

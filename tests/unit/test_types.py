@@ -1,7 +1,16 @@
 import pytest
 from pydantic import ValidationError
 
-from evalsvc.types import EvidenceItem, IngestIssue, IngestResult, Item, ReasonCode
+from evalsvc.types import (
+    Chunk,
+    EvidenceItem,
+    IngestIssue,
+    IngestResult,
+    Item,
+    Match,
+    ReasonCode,
+    Sentence,
+)
 
 
 def make_item(**overrides):
@@ -79,3 +88,53 @@ def test_models_cannot_be_changed_after_creation():
 def test_unknown_fields_are_rejected():
     with pytest.raises(ValidationError):
         EvidenceItem(index=0, text="text", source="unexpected")
+
+
+def make_chunk(**overrides):
+    values = {
+        "chunk_id": "c1",
+        "evidence_index": 0,
+        "start": 0,
+        "end": 18,
+        "text": "The limit is £500.",
+        "token_count": 4,
+    }
+    values.update(overrides)
+    return Chunk(**values)
+
+
+def test_context_text_is_the_text_when_there_is_no_heading():
+    assert make_chunk().context_text == "The limit is £500."
+
+
+def test_context_text_puts_the_heading_in_front():
+    chunk = make_chunk(heading="4.2 Cash withdrawals")
+
+    assert chunk.context_text == "4.2 Cash withdrawals\nThe limit is £500."
+
+
+def test_context_text_does_not_repeat_a_heading_the_text_starts_with():
+    text = "\n4.2 Cash withdrawals\nThe limit is £500."
+    chunk = make_chunk(heading="4.2 Cash withdrawals", text=text, end=len(text))
+
+    assert chunk.context_text == text
+
+
+def test_sentence_defaults_to_factual():
+    sentence = Sentence(index=0, start=0, end=18, text="The limit is £500.")
+
+    assert sentence.factual is True
+    assert sentence.matched_rule is None
+
+
+def test_text_types_cannot_be_changed_after_creation():
+    chunk = make_chunk()
+    sentence = Sentence(index=0, start=0, end=4, text="Text")
+    match = Match(start=0, end=4, text="£500", kind="amount")
+
+    with pytest.raises(ValidationError):
+        chunk.text = "changed"
+    with pytest.raises(ValidationError):
+        sentence.factual = False
+    with pytest.raises(ValidationError):
+        match.kind = "date"

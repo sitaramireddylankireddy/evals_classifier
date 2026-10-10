@@ -50,3 +50,38 @@ class IngestIssue(FrozenModel):
 class IngestResult(FrozenModel):
     items: list[Item]
     issues: list[IngestIssue]
+
+
+class Chunk(FrozenModel):
+    chunk_id: str
+    evidence_index: int
+    start: int  # character range in the evidence item
+    end: int
+    text: str
+    heading: str | None = None  # heading of the section the chunk starts in
+    token_count: int
+
+    @property
+    def context_text(self) -> str:
+        """The text given to the detector: the chunk with its section heading in front."""
+        if self.heading is None or self.text.lstrip().startswith(self.heading):
+            return self.text
+        return f"{self.heading}\n{self.text}"
+
+
+class Sentence(FrozenModel):
+    index: int
+    start: int  # character range in the answer
+    end: int
+    text: str
+    factual: bool = True
+    matched_rule: str | None = None  # name of the non-factual rule that matched
+
+
+class Match(FrozenModel):
+    """A value found in text by one of the pattern finders."""
+
+    start: int
+    end: int
+    text: str
+    kind: str  # "amount", "date", "percentage", or "reference"
