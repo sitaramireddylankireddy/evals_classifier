@@ -1,7 +1,7 @@
 """Data types shared across the service."""
 
 from enum import StrEnum
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -85,3 +85,37 @@ class Match(FrozenModel):
     end: int
     text: str
     kind: str  # "amount", "date", "percentage", or "reference"
+
+
+class TokenScore(FrozenModel):
+    start: int  # character range in the answer
+    end: int
+    prob: float  # probability that the token is not supported by the evidence
+
+
+class Span(FrozenModel):
+    start: int  # character range in the answer
+    end: int
+    text: str
+    confidence: float  # highest token probability in the span
+    excluded: bool = False  # touches no factual sentence, so it is left out of scoring
+
+
+class ModelInfo(FrozenModel):
+    name: str
+    revision: str
+    device: str | None = None  # "cpu" or "cuda"
+
+
+class GroundednessResult(FrozenModel):
+    evaluable: bool = True
+    not_evaluable_reason: str | None = None
+    verdict: Literal["pass", "fail"] | None = None
+    score: float | None = None  # None when the answer has no factual sentences
+    max_span_confidence: float = 0.0
+    max_token_probability: float = 0.0  # over factual sentences, independent of the threshold
+    unsupported_spans: list[Span] = Field(default_factory=list)
+    token_scores: list[TokenScore] = Field(default_factory=list)  # after combining windows
+    windows_run: int = 0
+    threshold: float
+    model: ModelInfo

@@ -37,8 +37,8 @@ Do the tasks in order. After each task, run its test file with `pytest <test fil
 
 - [ ] **T006** Wire the components
   - Files: `evalsvc/pipeline.py`, `tests/unit/test_pipeline.py`
-  - Content: `Components` and `build_components`, with a way for tests to pass in a fake detector and a stub judge.
-  - Done when: a test builds components with fakes and a temporary store, without loading a model.
+  - Content: `Components` and `build_components`, with a way for tests to pass in a fake detector and a stub judge. Without a detector passed in, it selects the model with `select_model` and applies that model's threshold with `detection_settings_for`.
+  - Done when: a test builds components with fakes and a temporary store, without loading a model; a test with model loading patched shows the large model is requested when a GPU is reported and the base model otherwise, and that a model's own threshold reaches the detection settings.
 
 - [ ] **T007** Evaluate one item
   - Files: `evalsvc/pipeline.py`, `tests/unit/test_pipeline.py`

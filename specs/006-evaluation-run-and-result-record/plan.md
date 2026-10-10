@@ -137,6 +137,7 @@ Any exception in steps 2 to 5 is caught. The item gets a not-evaluable record wi
 
 ### Rules
 
+- **Model**: `build_components` calls `gpu_available` and `select_model` from feature 003 once, builds the detector for the selected model, and uses `detection_settings_for` so the selected model's threshold is in force. One model serves the whole run. `RunSummary` gains `model` and `device`, and the command prints them. A store filled from GPU and CPU machines holds results from two models; each record's `model` field tells them apart.
 - **Sampling**: `is_sampled` hashes the seed and the item ID to a number between 0 and 1 and compares it with the rate. The result is repeatable, which makes it testable, and over many items the share matches the rate.
 - **Judge request**: item ID, question, the text of each non-excluded span with its surrounding sentence, and the full evidence.
 - **Store**: one file `results.jsonl` in the store directory, one record per line, never rewritten. The current record for an ID is the latest by `evaluated_at`. This gives history for free and settles re-evaluation of the same ID.

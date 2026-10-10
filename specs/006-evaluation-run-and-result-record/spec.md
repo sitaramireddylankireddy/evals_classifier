@@ -71,7 +71,7 @@ As an operator, one bad item does not cost me the results of the others.
 
 - **FR-001**: For each item, the system MUST run text preparation, groundedness detection, deterministic checks, and span explanations, in that order.
 - **FR-002**: The system MUST write exactly one result record per item, keyed by item ID.
-- **FR-003**: The record MUST contain: `id`, `model` (name and revision), `groundedness` (`verdict`, `score`, `max_span_confidence`, `unsupported_spans` each with `start`, `end`, `text`, `confidence`, `reason_type`, `reason`, `nearest_chunk_id`), `deterministic_checks`, `escalated`, and `windows_run`.
+- **FR-003**: The record MUST contain: `id`, `model` (name, revision, and device), `groundedness` (`verdict`, `score`, `max_span_confidence`, `unsupported_spans` each with `start`, `end`, `text`, `confidence`, `reason_type`, `reason`, `nearest_chunk_id`), `deterministic_checks`, `escalated`, and `windows_run`.
 - **FR-004**: The record MUST include every computed signal, including the threshold in force, the time of evaluation, and any metadata that came with the item.
 - **FR-005**: When the verdict is `fail`, the system MUST call the large judge with the flagged claims and the full evidence.
 - **FR-006**: The system MUST also send a random sample of items to the judge at a rate set in config, and record that the item was sampled.
@@ -83,6 +83,8 @@ As an operator, one bad item does not cost me the results of the others.
 - **FR-012**: Records contain customer text in spans and reasons. They MUST be written only to the service's own store. Application logs MUST carry only identifiers, counts, scores, and reason codes.
 - **FR-013**: The sample rate MUST come from config.
 - **FR-014**: After a list is processed, the system MUST report how many items were evaluated, how many passed, how many failed, and how many were not evaluable.
+- **FR-015**: At the start of a run the system MUST select the model from the hardware, as defined in feature 003: the large model on a GPU and the base model on CPU. One model is used for the whole run, and the run report names the model and device.
+- **FR-016**: The threshold in force for a run MUST be the selected model's own threshold when it has one.
 
 ### Key Entities
 

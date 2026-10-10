@@ -3,7 +3,7 @@
 import re
 import tomllib
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Literal
 
 from pydantic import AfterValidator, Field, ValidationError, model_validator
 
@@ -94,11 +94,53 @@ class ChecksSettings(FrozenModel):
     )
 
 
+class ModelVariantSettings(FrozenModel):
+    name: str
+    path: str = ""  # local folder holding the weights; never a hub name
+    revision: str = ""  # pinned commit hash, recorded in every result
+    # Threshold chosen for this model from the golden set. None means use [detection].threshold.
+    threshold: float | None = Field(default=None, ge=0.0, le=1.0)
+
+
+class LargeModelSettings(ModelVariantSettings):
+    name: str = "lettucedect-large-modernbert-en-v1"
+
+
+class BaseModelSettings(ModelVariantSettings):
+    name: str = "lettucedect-base-modernbert-en-v1"
+
+
+class ModelSettings(FrozenModel):
+    # "auto" runs the large model on a GPU and the base model on CPU.
+    select: Literal["auto", "large", "base"] = "auto"
+    device: Literal["auto", "cpu", "cuda"] = "auto"
+    batch_size: int = Field(default=4, ge=1)
+    # The models read up to 8,192 tokens, but lettucedetect trains and runs them at 4,096.
+    max_tokens: int = Field(default=4096, ge=16)
+    large: LargeModelSettings = LargeModelSettings()
+    base: BaseModelSettings = BaseModelSettings()
+
+
+class DetectionSettings(FrozenModel):
+    threshold: float = Field(default=0.5, ge=0.0, le=1.0)
+    window_evidence_tokens: int = Field(default=6000, ge=1)
+    window_overlap_tokens: int = Field(default=500, ge=0)
+    safety_margin_tokens: int = Field(default=32, ge=0)
+
+    @model_validator(mode="after")
+    def _overlap_below_window(self) -> "DetectionSettings":
+        if self.window_overlap_tokens >= self.window_evidence_tokens:
+            raise ValueError("window_overlap_tokens must be smaller than window_evidence_tokens")
+        return self
+
+
 class Settings(FrozenModel):
     input: InputSettings = InputSettings()
     chunking: ChunkingSettings = ChunkingSettings()
     sentences: SentenceSettings = SentenceSettings()
     checks: ChecksSettings = ChecksSettings()
+    model: ModelSettings = ModelSettings()
+    detection: DetectionSettings = DetectionSettings()
 
 
 def load_settings(path: Path) -> Settings:

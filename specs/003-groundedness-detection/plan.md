@@ -12,7 +12,8 @@ Shared stack: see [001 plan](../001-input-ingestion/plan.md), Technical Context.
 
 - **New dependencies**: `torch`, `transformers` (a version that supports ModernBERT). `lettucedetect` is a test-only dependency used for one parity check.
 - **Loading approach**: load directly with `AutoTokenizer` and `AutoModelForTokenClassification`, which the constitution allows. The reason is offsets: the tokenizer returns the character range of every token, which the spec requires and which the packaged token output is not known to provide.
-- **Device**: `auto` picks a GPU when one is present, otherwise CPU. The model path decides large or base.
+- **Device and model**: the service runs on GPU or CPU. Config holds both models. At start-up `select_model` picks the large model on a GPU and the base model on CPU, unless config forces a model or a device.
+- **GPU build of torch**: on Windows, `pip install torch` installs a CPU-only build. A GPU machine needs the CUDA build from the PyTorch package index or the internal mirror. With a CPU-only build, `torch.cuda.is_available()` is false and the base model is selected.
 
 ## Constitution Check
 
@@ -37,6 +38,7 @@ evalsvc/
   detector/
     __init__.py
     prompt.py              # format_context
+    select.py              # SelectedModel, gpu_available, select_model, detection_settings_for
     model.py               # TransformerDetector, HFTokenCounter
     windows.py             # plan_windows, aggregate_min, merge_spans
   evaluators/
@@ -115,7 +117,7 @@ class HFTokenCounter:                    # implements TokenCounter from feature 
 
 ### Algorithm
 
-1. **Budget**: `budget = detector.max_tokens - detector.fixed_cost(question, answer, n_passages) - safety_margin`. The fixed cost covers the question, the answer, the prompt wording, and special tokens. If the budget is smaller than one chunk, return not evaluable with `no_room_for_evidence`.
+1. **Budget**: `budget = detector.max_tokens - detector.fixed_cost(question, answer) - safety_margin`. The fixed cost covers the question, the answer, the prompt wording, and special tokens. Each chunk's cost comes from `detector.passage_cost`, which includes the wrapper around a passage. If the budget is smaller than one chunk, return not evaluable with `no_room_for_evidence`.
 2. **Single pass or windows**: if all chunks fit in the budget, use one window with all chunks. Otherwise use `min(window_tokens, budget)` per window.
 3. **Window planning**: a window is a run of consecutive whole chunks. The next window starts by stepping back from the end of the previous one until at least `overlap_tokens` are repeated. Every chunk is in at least one window.
 4. **Detection**: run windows through `score_batch` in batches of `batch_size`. Each window uses `chunk.context_text` for its passages, with the full question and full answer.
@@ -126,8 +128,33 @@ class HFTokenCounter:                    # implements TokenCounter from feature 
 
 `verdict_from_tokens` holds steps 6 to 8 so the golden-set harness can apply many thresholds to one detector run.
 
+### Model selection
+
+```python
+# evalsvc/detector/select.py
+class SelectedModel:
+    variant: Literal["large", "base"]
+    name: str
+    path: str
+    revision: str
+    device: Literal["cpu", "cuda"]
+    threshold: float
+
+def gpu_available() -> bool: ...
+def select_model(settings: Settings, has_gpu: bool) -> SelectedModel: ...
+def detection_settings_for(settings: Settings, selected: SelectedModel) -> DetectionSettings: ...
+```
+
+- **Device**: `cuda` when `model.device` is `cuda`, or is `auto` and a GPU is available. Otherwise `cpu`. A forced `cuda` with no GPU is a config error.
+- **Model**: with `model.select = "auto"`, large on `cuda` and base on `cpu`. `"large"` or `"base"` forces one, on whichever device was chosen.
+- **No fallback**: if the selected model has no `path`, start-up fails with an error naming the missing key. The other model is never used in its place, because that would change results without anyone knowing.
+- **Threshold**: the selected model's own `threshold` when it has one, otherwise `[detection].threshold`. `detection_settings_for` returns the detection settings with that threshold in force.
+- **Recording**: `ModelInfo` gains a `device` field, so every result shows the model name, revision, and device.
+- `select_model` takes `has_gpu` as an argument, so it is tested without torch or a GPU.
+
 ### Model wrapper
 
+- Takes a `SelectedModel`, loads from its `path`, and moves the model and every input batch to its `device`.
 - Builds the model input as a pair: the formatted context and question as the first part, the answer as the second, with truncation off. The caller guarantees the fit.
 - Reads token character ranges from the tokenizer's offset mapping, keeps only answer tokens, and drops special tokens.
 - Applies softmax to the logits and takes the probability of the "unsupported" label.
@@ -137,12 +164,21 @@ class HFTokenCounter:                    # implements TokenCounter from feature 
 
 ```toml
 [model]
-name = "lettucedect-large-modernbert-en-v1"
-path = "D:/models/lettucedect-large-modernbert-en-v1"
-revision = "<pinned commit hash>"
+select = "auto"          # auto (large on GPU, base on CPU), large, base
 device = "auto"          # auto, cpu, cuda
 batch_size = 4
 max_tokens = 8192
+
+[model.large]
+name = "lettucedect-large-modernbert-en-v1"
+path = "C:/models/lettucedect-large-modernbert-en-v1"
+revision = "<pinned commit hash>"
+# threshold = 0.6      # optional, chosen from the golden set
+
+[model.base]
+name = "lettucedect-base-modernbert-en-v1"
+path = "C:/models/lettucedect-base-modernbert-en-v1"
+revision = "<pinned commit hash>"
 
 [detection]
 threshold = 0.5
@@ -171,14 +207,30 @@ safety_margin_tokens = 32
 
 ## Risks and Items to Verify
 
-These must be checked against the installed `lettucedetect` package and the downloaded model before coding the wrapper. I have not verified them.
+### Findings (task T012, verified on 2026-10-10)
+
+Checked against `lettucedetect` 0.2.3, `transformers` 5.19.0, `torch` 2.14.1, and the base model at commit `bbd77832f52f9bd87546a3924c032467921f5c34`.
+
+1. **Prompt format.** The wording is in the package's `prompts/qa_prompt_en.txt`, filled by `PromptUtils.format_context` in `detectors/prompt_utils.py`. Each passage becomes a line `passage N: text`. With no question, `prompts/summary_prompt_en.txt` is used. `evalsvc/detector/prompt.py` holds a copy, and a slow test compares it with the installed files.
+2. **Input length.** The model and tokenizer accept 8,192 tokens, but the package trains and runs at `max_length = 4096`. The default `model.max_tokens` is therefore 4,096. With this limit, 32,000 tokens of evidence needs about ten windows, not six. Raising it to 8,192 is a config change and should be justified with the golden set.
+3. **Label index.** The package reads probability index 1 as "hallucinated". The model's own config names no labels.
+4. **Input layout.** The tokenizer is given the pair (prompt, answer), which gives `[CLS] prompt [SEP] answer [SEP]`. The package truncates the prompt when the input is too long. The wrapper never truncates: it raises `DetectorInputError`.
+5. **Aggregation differs on purpose.** When the package splits evidence itself, it keeps the highest probability per token across parts. This service keeps the lowest, as the brief requires: a token is supported if any window supports it.
+6. **Package dependencies.** The package was installed with `--no-deps`, so the token parity test is skipped when the package cannot be imported. The prompt wording test only reads the package's files.
+
+### Original list
+
+These were the items to check before coding the wrapper.
 
 1. **Prompt format.** The detector was trained on a specific wording that wraps the passages and the question. The wrapper must reproduce it exactly, either by calling the package's own formatting helper or by copying it into `prompt.py` with the package version noted. The parity test guards this.
 2. **Trained input length.** The model accepts 8,192 tokens, but the package may truncate at a lower default (possibly 4,096). If so, set `max_tokens` to that value; window planning adapts on its own.
 3. **Label index.** Which output label means "unsupported". Believed to be label 1.
 4. **Token output fields.** The brief asks to verify the field names of the package's token-level output. This plan does not depend on them, since it reads offsets from the tokenizer, but the parity test uses the span output.
-5. **Revision pinning with a local path.** A local folder has no revision of its own. The plan records the configured revision in every result, and when the path is a hub cache snapshot folder, checks that the folder name equals the configured hash.
+5. **Two models, two score scales.** The large and base models give different probabilities for the same text, so one threshold does not suit both. Each model gets its own threshold from the golden-set sweep (feature 007). Until then both use `[detection].threshold`.
+6. **Results from mixed hardware.** A store filled by GPU and CPU machines holds results from two models. Every record carries the model name and device so they can be told apart.
+7. **GPU memory.** The large model with 8,192-token inputs may need a smaller `batch_size` on a small GPU. It is a config value.
+8. **Revision pinning with a local path.** A local folder has no revision of its own. The plan records the configured revision in every result, and when the path is a hub cache snapshot folder, checks that the folder name equals the configured hash.
 
 ## Assumptions Carried From the Spec
 
-Starting threshold 0.5. Span confidence is the highest token probability. No factual sentences gives an empty score and `pass`. No evidence gives not evaluable. Excluded spans are recorded and do not cause `fail`. GPU availability is unknown, so the device is `auto`.
+Starting threshold 0.5. Span confidence is the highest token probability. No factual sentences gives an empty score and `pass`. No evidence gives not evaluable. Excluded spans are recorded and do not cause `fail`. The service supports GPU and CPU, with the model chosen at start-up.

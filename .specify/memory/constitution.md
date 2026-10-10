@@ -65,7 +65,10 @@ Rationale: routing and retraining in later phases depend on this history, and a 
 ## Technology and Scope Constraints
 
 - Language: Python 3.14.
-- Detector: `KRLabsOrg/lettucedect-large-modernbert-en-v1`, with `KRLabsOrg/lettucedect-base-modernbert-en-v1` as the CPU fallback. Context, question, and answer together MUST fit in 8,192 tokens; larger evidence uses sliding windows.
+- Detector: `KRLabsOrg/lettucedect-large-modernbert-en-v1` on a GPU and `KRLabsOrg/lettucedect-base-modernbert-en-v1` on CPU. The service MUST run on either. At start-up it selects the large model when a GPU is available and the base model otherwise; config can force either model or either device.
+- Both models MUST be configured with their own local path and pinned revision. If the selected model is not configured, the service MUST stop with a clear error. It MUST NOT fall back to the other model without the operator knowing.
+- Every result MUST record the model name, revision, and device that produced it. A threshold is chosen per model from the golden set, since the two models score differently.
+- Context, question, and answer together MUST fit in 8,192 tokens; larger evidence uses sliding windows.
 - Sentence splitting: spaCy.
 - Current scope is groundedness detection only: the detector, sliding windows, deterministic checks, rule-based explanations, result records, and the golden-set harness.
 - Version 1 has no embedding model, no reranker, and no LLM-written explanations.
@@ -88,4 +91,4 @@ Rationale: routing and retraining in later phases depend on this history, and a 
 - Principles I and II may be changed only with approval from the bank's security and compliance owners.
 - Every review checks the change against the principles. A deviation MUST be justified in writing in the plan.
 
-**Version**: 1.1.3 | **Ratified**: 2026-10-10 | **Last Amended**: 2026-10-10
+**Version**: 1.2.0 | **Ratified**: 2026-10-10 | **Last Amended**: 2026-10-10

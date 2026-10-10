@@ -125,7 +125,10 @@ def main(argv: list[str] | None = None) -> int: ...
 - **Command**:
   - `python -m evalsvc.cli.run_eval --config config.toml --golden golden.jsonl --out reports/`
   - add `--sweep` for the threshold sweep
-  - add `--compare other_config.toml` for the side-by-side comparison
+  - add `--compare other_config.toml` for the side-by-side comparison with another config
+  - add `--compare-models` to compare the large and base models of this one config
+  - add `--model large` or `--model base` to force the model for the run
+- **Model choice**: without `--model`, the run uses the model that feature 003's `select_model` picks from the hardware. `--compare-models` runs both, each forced in turn on the available device, and needs both paths set. The sweep is reported for each model, and the chosen thresholds go into `[model.large].threshold` and `[model.base].threshold`.
 
 ## Config Keys
 

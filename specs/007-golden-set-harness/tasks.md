@@ -70,8 +70,8 @@ Do the tasks in order. After each task, run its test file with `pytest <test fil
 
 - [ ] **T011** Add the command
   - Files: `evalsvc/cli/run_eval.py`, `tests/unit/test_cli_run_eval.py`
-  - Content: `main`, taking `--config`, `--golden`, `--out`, `--sweep`, and `--compare`; sets offline mode; writes nothing to the result store and calls no judge.
-  - Done when: tests calling `main` with fakes show both report files are written; `--sweep` adds the sweep section; `--compare` adds the comparison section; the store folder stays empty.
+  - Content: `main`, taking `--config`, `--golden`, `--out`, `--sweep`, `--compare`, `--compare-models`, and `--model`; sets offline mode; writes nothing to the result store and calls no judge.
+  - Done when: tests calling `main` with fakes show both report files are written; `--sweep` adds the sweep section; `--compare` and `--compare-models` each add the comparison section; `--model` forces the model named; with `--compare-models` the sweep is reported for each model; the store folder stays empty.
 
 - [ ] **T012** Check against the hand-worked values
   - Files: `tests/unit/test_cli_run_eval.py`
@@ -85,4 +85,4 @@ Do the tasks in order. After each task, run its test file with `pytest <test fil
 
 - [ ] **T014** Run the first experiment (needs the model and real labelled data)
   - Files: none
-  - Done when: `python -m evalsvc.cli.run_eval --config config.toml --golden <golden file> --out reports/ --sweep --compare <base model config>` produces a report, and a threshold and a base-or-large choice are recorded from it.
+  - Done when: `python -m evalsvc.cli.run_eval --config config.toml --golden <golden file> --out reports/ --sweep --compare-models` produces a report, and a threshold for each model is recorded from it in `[model.large]` and `[model.base]`.

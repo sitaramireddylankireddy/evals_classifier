@@ -33,6 +33,8 @@ ALLOWED_FIELDS = frozenset(
         "threshold",
         "seconds",
         "model",
+        "variant",
+        "device",
         "revision",
         "status",
         "error_code",

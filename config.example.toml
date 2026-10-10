@@ -49,3 +49,34 @@ currencies = ["GBP"]
 reference_patterns = [
     '(?i)\b(?:section|clause|paragraph|article)\s+\d+(?:\.\d+)*[a-z]?\b',
 ]
+
+[model]
+# "auto" runs the large model when a GPU is available and the base model otherwise.
+# "large" or "base" forces one of them.
+select = "auto"
+device = "auto"          # "auto", "cpu", or "cuda"
+batch_size = 4
+# Most tokens in one pass: prompt, evidence, and answer together. The models can read
+# 8192, but the lettucedetect package trains and runs them at 4096, so that is the default.
+max_tokens = 4096
+
+# For each model: `path` is the local folder that holds the weights, for example
+# "C:/models/lettucedect-large-modernbert-en-v1". The service never downloads a model.
+# `revision` is the pinned commit hash of the model. It is recorded in every result.
+# A model can also have its own `threshold = 0.6`, chosen from the golden set.
+# Without one, the threshold in [detection] is used.
+[model.large]
+name = "lettucedect-large-modernbert-en-v1"
+path = ""
+revision = ""
+
+[model.base]
+name = "lettucedect-base-modernbert-en-v1"
+path = ""
+revision = ""
+
+[detection]
+threshold = 0.5
+window_evidence_tokens = 6000
+window_overlap_tokens = 500
+safety_margin_tokens = 32

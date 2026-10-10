@@ -10,3 +10,4 @@ dist/
 config.toml
 store/
 reports/
+inspect_output.txt

@@ -48,15 +48,20 @@ As an operator, I get one score and one verdict per item to track and route on.
 3. **Given** an item, **Then** the highest span confidence is reported as `max_span_confidence`, and it is 0 when there are no spans.
 4. **Given** a span that lies wholly inside a non-factual sentence, **Then** it does not lower the score.
 
-### User Story 4 - Swap and compare models (Priority: P2)
+### User Story 4 - Run on GPU or CPU with the right model (Priority: P1)
 
-As a developer, I can switch between the large and the base detector by config and see which one produced a result.
+As an operator, I can run the service on a machine with or without a GPU. It uses the large model on a GPU and the base model on CPU, and I can see which one produced a result.
 
 **Acceptance Scenarios**:
 
-1. **Given** a config naming a different model path and revision, **When** the service starts, **Then** that model is used with no code change.
-2. **Given** any result, **Then** it records the model name and revision that produced it.
-3. **Given** the service at run time, **Then** it makes no outbound network call and loads weights only from the configured local path.
+1. **Given** a machine with a GPU, **When** the service starts with default settings, **Then** the large model is loaded on the GPU.
+2. **Given** a machine with no GPU, **When** the service starts with default settings, **Then** the base model is loaded on CPU.
+3. **Given** a config that forces one model or one device, **When** the service starts, **Then** that choice is used with no code change.
+4. **Given** the selected model has no local path configured, **When** the service starts, **Then** it stops with a clear error and does not switch to the other model.
+5. **Given** a config that forces the GPU on a machine without one, **When** the service starts, **Then** it stops with a clear error.
+6. **Given** any result, **Then** it records the model name, revision, and device that produced it.
+7. **Given** a threshold set for one model, **Then** that threshold is used when that model runs, and the general threshold is used otherwise.
+8. **Given** the service at run time, **Then** it makes no outbound network call and loads weights only from the configured local path.
 
 ### Edge Cases
 
@@ -79,6 +84,11 @@ As a developer, I can switch between the large and the base detector by config a
 - **FR-007**: `groundedness_score` MUST be the share of factual sentences that contain no flagged span.
 - **FR-008**: `verdict` MUST be `fail` if any span is above the configured threshold, otherwise `pass`.
 - **FR-009**: Model path, model revision, threshold, window size, and overlap MUST come from config. The model revision MUST be pinned.
+- **FR-013**: The system MUST run on both GPU and CPU. Config holds two models, large and base, each with its own path and revision.
+- **FR-014**: At start-up the system MUST select the large model when a GPU is available and the base model otherwise. Config MUST be able to force either model and either device.
+- **FR-015**: If the selected model is not configured, or a forced GPU is not available, the system MUST stop with a clear error. It MUST NOT fall back to the other model.
+- **FR-016**: Each model MAY have its own threshold in config. When it has one, that threshold applies whenever that model runs.
+- **FR-017**: Every result MUST record the device as well as the model name and revision.
 - **FR-010**: The model MUST load from a local path, offline, without executing code shipped with the model.
 - **FR-011**: The window-combining and span-merging behaviour MUST be testable with a stand-in detector, with no model weights present.
 - **FR-012**: An item that cannot be checked MUST be returned as not evaluable with a reason code, and MUST NOT stop other items.
@@ -105,7 +115,7 @@ As a developer, I can switch between the large and the base detector by config a
 
 ## Open Questions
 
-1. Is a GPU available, or is this CPU only? This decides whether the large or the base model is the default.
+1. Resolved: the service supports both. It uses the large model on a GPU and the base model on CPU (User Story 4).
 2. What is the starting threshold before the golden-set sweep chooses one? 0.5 is assumed.
 3. How is a span's confidence defined when it covers several positions: the highest value in the span, or the average? The highest is assumed.
 4. When an answer has no factual sentences, what are the score and verdict? Assumed: score is empty and verdict is `pass`.

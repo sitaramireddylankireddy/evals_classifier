@@ -136,3 +136,84 @@ def test_invalid_heading_pattern_gives_a_clear_error(tmp_path):
 
     with pytest.raises(ConfigError, match="chunking.heading_patterns"):
         load_settings(path)
+
+
+# --- Model and detection settings (feature 003) ---
+
+
+def test_model_and_detection_defaults():
+    settings = Settings()
+
+    assert settings.model.select == "auto"
+    assert settings.model.large.name == "lettucedect-large-modernbert-en-v1"
+    assert settings.model.base.name == "lettucedect-base-modernbert-en-v1"
+    assert (settings.model.large.path, settings.model.large.revision) == ("", "")
+    assert (settings.model.base.path, settings.model.base.revision) == ("", "")
+    assert settings.model.large.threshold is None
+    assert settings.model.base.threshold is None
+    assert settings.model.device == "auto"
+    assert settings.model.batch_size == 4
+    assert settings.model.max_tokens == 4096
+    assert settings.detection.threshold == 0.5
+    assert settings.detection.window_evidence_tokens == 6000
+    assert settings.detection.window_overlap_tokens == 500
+    assert settings.detection.safety_margin_tokens == 32
+
+
+def test_both_models_can_be_set_in_the_file(tmp_path):
+    path = write_config(
+        tmp_path,
+        '[model]\nselect = "base"\ndevice = "cpu"\n'
+        '[model.large]\npath = "C:/models/large"\nrevision = "abc123"\nthreshold = 0.7\n'
+        '[model.base]\npath = "C:/models/base"\nrevision = "def456"\n',
+    )
+
+    settings = load_settings(path)
+
+    assert settings.model.select == "base"
+    assert settings.model.device == "cpu"
+    assert settings.model.large.name == "lettucedect-large-modernbert-en-v1"
+    assert settings.model.large.path == "C:/models/large"
+    assert settings.model.large.revision == "abc123"
+    assert settings.model.large.threshold == 0.7
+    assert settings.model.base.name == "lettucedect-base-modernbert-en-v1"
+    assert settings.model.base.path == "C:/models/base"
+    assert settings.model.base.threshold is None
+
+
+def test_unknown_model_choice_is_rejected(tmp_path):
+    path = write_config(tmp_path, '[model]\nselect = "medium"\n')
+
+    with pytest.raises(ConfigError, match="model.select"):
+        load_settings(path)
+
+
+def test_model_threshold_outside_zero_to_one_is_rejected(tmp_path):
+    path = write_config(tmp_path, "[model.large]\nthreshold = 1.2\n")
+
+    with pytest.raises(ConfigError, match="model.large.threshold"):
+        load_settings(path)
+
+
+@pytest.mark.parametrize("threshold", ["1.5", "-0.1"])
+def test_threshold_outside_zero_to_one_is_rejected(tmp_path, threshold):
+    path = write_config(tmp_path, f"[detection]\nthreshold = {threshold}\n")
+
+    with pytest.raises(ConfigError, match="detection.threshold"):
+        load_settings(path)
+
+
+def test_overlap_as_large_as_the_window_is_rejected(tmp_path):
+    path = write_config(
+        tmp_path, "[detection]\nwindow_evidence_tokens = 500\nwindow_overlap_tokens = 500\n"
+    )
+
+    with pytest.raises(ConfigError, match="window_overlap_tokens"):
+        load_settings(path)
+
+
+def test_unknown_device_is_rejected(tmp_path):
+    path = write_config(tmp_path, '[model]\ndevice = "quantum"\n')
+
+    with pytest.raises(ConfigError, match="model.device"):
+        load_settings(path)

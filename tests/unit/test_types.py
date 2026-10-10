@@ -4,12 +4,16 @@ from pydantic import ValidationError
 from evalsvc.types import (
     Chunk,
     EvidenceItem,
+    GroundednessResult,
     IngestIssue,
     IngestResult,
     Item,
     Match,
+    ModelInfo,
     ReasonCode,
     Sentence,
+    Span,
+    TokenScore,
 )
 
 
@@ -138,3 +142,37 @@ def test_text_types_cannot_be_changed_after_creation():
         sentence.factual = False
     with pytest.raises(ValidationError):
         match.kind = "date"
+
+
+def test_groundedness_result_defaults():
+    result = GroundednessResult(threshold=0.5, model=ModelInfo(name="m", revision="r"))
+
+    assert result.evaluable is True
+    assert result.verdict is None
+    assert result.score is None
+    assert result.max_span_confidence == 0.0
+    assert result.max_token_probability == 0.0
+    assert result.unsupported_spans == []
+    assert result.token_scores == []
+    assert result.windows_run == 0
+
+
+def test_groundedness_result_rejects_an_unknown_verdict():
+    with pytest.raises(ValidationError):
+        GroundednessResult(
+            verdict="maybe", threshold=0.5, model=ModelInfo(name="m", revision="r")
+        )
+
+
+def test_detection_types_cannot_be_changed_after_creation():
+    token = TokenScore(start=0, end=4, prob=0.9)
+    span = Span(start=0, end=4, text="£500", confidence=0.9)
+    result = GroundednessResult(threshold=0.5, model=ModelInfo(name="m", revision="r"))
+
+    assert span.excluded is False
+    with pytest.raises(ValidationError):
+        token.prob = 0.1
+    with pytest.raises(ValidationError):
+        span.excluded = True
+    with pytest.raises(ValidationError):
+        result.verdict = "pass"

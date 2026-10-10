@@ -71,7 +71,9 @@ As a developer, I compare the base and the large model side by side on the same 
 - **FR-003**: The report MUST include recall on known failures, precision, false-alarm rate, and area under the precision-recall curve.
 - **FR-004**: The report MUST break every measure down per category where items carry one.
 - **FR-005**: The command MUST support a threshold sweep over a configured range, reusing one detector run per item.
-- **FR-006**: The command MUST support comparing two model configs on the same golden set.
+- **FR-006**: The command MUST support comparing two model configs on the same golden set. Because one config holds both the large and the base model, it MUST also be able to compare those two directly from a single config.
+- **FR-012**: The command MUST allow the model to be forced for a run, so the base model can be measured on a GPU machine and the large model on a CPU machine.
+- **FR-013**: The threshold sweep MUST be reported per model, since each model gets its own threshold in config.
 - **FR-007**: The report MUST be written both as a readable summary and as a data file, so results can be kept and compared over time.
 - **FR-008**: The report MUST record the golden-set file identity, the model name and revision, the threshold, and the date of the run.
 - **FR-009**: The report MUST NOT contain raw customer text. Items are referred to by item ID.
