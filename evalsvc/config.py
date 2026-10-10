@@ -151,7 +151,31 @@ class JudgeSettings(FrozenModel):
     timeout_seconds: float = Field(default=60.0, gt=0.0)
 
 
+class GoldenSettings(FrozenModel):
+    label_key: str = "label"
+    failure_value: str = "ungrounded"  # the answer has unsupported content
+    pass_value: str = "grounded"
+    category_key: str = "category"
+    # A group with fewer evaluated items than this is marked unreliable in the report.
+    min_group_size: int = Field(default=20, ge=1)
+
+
+class SweepSettings(FrozenModel):
+    start: float = Field(default=0.05, ge=0.0, le=1.0)
+    stop: float = Field(default=0.95, ge=0.0, le=1.0)
+    step: float = Field(default=0.05, gt=0.0, le=1.0)
+    recall_target: float = Field(default=0.9, ge=0.0, le=1.0)
+
+    @model_validator(mode="after")
+    def _start_below_stop(self) -> "SweepSettings":
+        if self.start >= self.stop:
+            raise ValueError("start must be smaller than stop")
+        return self
+
+
 class Settings(FrozenModel):
+    golden: GoldenSettings = GoldenSettings()
+    sweep: SweepSettings = SweepSettings()
     run: RunSettings = RunSettings()
     store: StoreSettings = StoreSettings()
     judge: JudgeSettings = JudgeSettings()

@@ -81,6 +81,20 @@ class FakeDetector:
         ]
 
 
+class BlindDetector(FakeDetector):
+    """A detector that never flags anything. Used to give comparisons a known difference."""
+
+    def __init__(self, **kwargs: Any) -> None:
+        super().__init__(**kwargs)
+        self.info = ModelInfo(name="blind-detector", revision="test")
+
+    def _score(self, passages: list[str], answer: str) -> list[TokenScore]:
+        return [
+            TokenScore(start=match.start(), end=match.end(), prob=SUPPORTED_PROB)
+            for match in _WORD.finditer(answer)
+        ]
+
+
 class FakeChecks:
     """Stand-in for the deterministic checks stage."""
 

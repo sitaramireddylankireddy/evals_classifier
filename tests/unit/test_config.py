@@ -212,6 +212,36 @@ def test_overlap_as_large_as_the_window_is_rejected(tmp_path):
         load_settings(path)
 
 
+# --- Golden-set and sweep settings (feature 007) ---
+
+
+def test_golden_and_sweep_defaults():
+    settings = Settings()
+
+    assert settings.golden.label_key == "label"
+    assert settings.golden.failure_value == "ungrounded"
+    assert settings.golden.pass_value == "grounded"
+    assert settings.golden.category_key == "category"
+    assert settings.golden.min_group_size == 20
+    assert (settings.sweep.start, settings.sweep.stop, settings.sweep.step) == (0.05, 0.95, 0.05)
+    assert settings.sweep.recall_target == 0.9
+
+
+def test_sweep_start_above_stop_is_rejected(tmp_path):
+    path = write_config(tmp_path, "[sweep]\nstart = 0.9\nstop = 0.1\n")
+
+    with pytest.raises(ConfigError, match="start must be smaller than stop"):
+        load_settings(path)
+
+
+@pytest.mark.parametrize("target", ["1.5", "-0.1"])
+def test_recall_target_outside_zero_to_one_is_rejected(tmp_path, target):
+    path = write_config(tmp_path, f"[sweep]\nrecall_target = {target}\n")
+
+    with pytest.raises(ConfigError, match="sweep.recall_target"):
+        load_settings(path)
+
+
 # --- Run, store, and judge settings (feature 006) ---
 
 

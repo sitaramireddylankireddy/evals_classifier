@@ -3,6 +3,20 @@
 # Patterns are regular expressions, written in single quotes so that
 # backslashes are kept as they are.
 
+# Settings for the golden-set harness (python -m evalsvc.cli.run_eval).
+[golden]
+label_key = "label"
+failure_value = "ungrounded"   # the answer has unsupported content
+pass_value = "grounded"
+category_key = "category"
+min_group_size = 20            # smaller groups are marked unreliable in the report
+
+[sweep]
+start = 0.05
+stop = 0.95
+step = 0.05
+recall_target = 0.9
+
 [run]
 # Share of evaluable items sent to the judge whatever their verdict. Failed items always go.
 sample_rate = 0.02
